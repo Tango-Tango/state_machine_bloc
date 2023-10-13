@@ -4,6 +4,7 @@ import 'package:meta/meta.dart';
 
 part 'state_definition.dart';
 part 'state_definition_builder.dart';
+part 'state_handler.dart';
 
 /// {@template state_machine}
 /// A Bloc that provides facilities methods to create state machines
@@ -54,7 +55,6 @@ abstract class StateMachine<Event, State> extends Bloc<Event, State> {
   /// {@macro state_machine}
   StateMachine(
     State initial, {
-
     /// Used to change how the state machine process incoming events.
     /// The default event transformer is [droppable] by default, meaning it
     /// processes only one event and ignores (drop) any new events until the
@@ -102,8 +102,7 @@ abstract class StateMachine<Event, State> extends Bloc<Event, State> {
   void define<DefinedState extends State>([
     StateDefinitionBuilder<Event, State, DefinedState> Function(
       StateDefinitionBuilder<Event, State, DefinedState>,
-    )?
-        definitionBuilder,
+    )? definitionBuilder,
   ]) {
     late final _StateDefinition definition;
     if (definitionBuilder != null) {
@@ -126,6 +125,33 @@ abstract class StateMachine<Event, State> extends Bloc<Event, State> {
 
     if (state is DefinedState) {
       definition.onEnter(state);
+    }
+  }
+
+  void defineHandler<DefinedState extends State>(
+      StateHandler<Event, State, DefinedState> handler) {
+    final builder = handler._builder;
+
+    handler.add = add;
+    handler.registerEventHandlers();
+    builder.onEnter(handler.onEnter);
+    builder.onExit(handler.onExit);
+    builder.onChange(handler.onChange);
+
+    final definition = handler._build();
+
+    assert(() {
+      if (_definedStates.contains(DefinedState)) {
+        throw "$DefinedState has been defined multiple times. States should only be defined once.";
+      }
+      _definedStates.add(DefinedState);
+      return true;
+    }());
+
+    _stateDefinitions.add(definition);
+
+    if (state is DefinedState) {
+      definition.onEnter(state as DefinedState);
     }
   }
 

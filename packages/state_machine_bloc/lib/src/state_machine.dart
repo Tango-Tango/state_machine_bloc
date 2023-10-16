@@ -134,7 +134,7 @@ abstract class StateMachine<Event, State> extends Bloc<Event, State> {
       StateHandler<Event, State, DefinedState> handler) {
     final builder = handler._builder;
 
-    handler.add = add;
+    handler.add = _wrappedAddFn;
     handler.registerEventHandlers();
     builder.onEnter(handler.onEnter);
     builder.onExit(handler.onExit);
@@ -214,4 +214,21 @@ abstract class StateMachine<Event, State> extends Bloc<Event, State> {
 
   _StateDefinition _definition(State state) =>
       _stateDefinitions.firstWhere((def) => def.isType(state));
+
+  /// This allows all [add] calls to check if the bloc is closed, asserting if
+  /// it is during development. Should help catch lifecycle issues during dev.
+  ///
+  /// allows state handlers to ignore checking [isClosed]
+  void _wrappedAddFn(Event event) {
+    assert(() {
+      if (isClosed) {
+        throw "Tried to add $event but $this is disposed.";
+      }
+      return true;
+    }());
+
+    if (!isClosed) {
+      add(event);
+    }
+  }
 }

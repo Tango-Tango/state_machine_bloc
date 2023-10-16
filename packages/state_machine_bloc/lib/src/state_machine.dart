@@ -130,6 +130,51 @@ abstract class StateMachine<Event, State> extends Bloc<Event, State> {
     }
   }
 
+  /// Register a [StateHandler<Event, State, DefinedState>] as one of the
+  /// allowed machine's states.
+  ///
+  /// A [StateHandler<Event, State, DefinedState>] allows for breaking up the
+  /// business logic of a given state into smaller units of code, potentially
+  /// increasing readability and testability.
+  ///
+  /// Simply extend [StateHandler<Event, State, DefinedState>] and utilize the
+  /// available methods to create [onEnter], [onExit], [onChange], and [on]
+  /// handlers for a given [DefinedState].
+  ///
+  /// Handlers have an available [add] method to add new events to the bloc. All
+  /// defined handlers operate the same as using [StateDefinitionBuilder]
+  /// directly.
+  ///
+  /// ```dart
+  /// class InitialStateHandler extends StateHandler<Event, State, InitialState> {
+  ///   @override
+  ///   registerEventHandlers() {
+  ///     on<SomeEvent>((SomeEvent event, InitialState state) => OtherState());
+  ///   }
+  ///
+  ///   @override
+  ///   Future<void> onEnter(state) async {
+  ///     print('in onEnter');
+  ///   }
+  ///
+  ///   @override
+  ///   Future<void> onExit(state) async {
+  ///     print('in onExit');
+  ///   }
+  ///
+  ///   @override
+  ///   Future<void> onChange(previous, next) async {
+  ///     print('in onChange: $previous $next');
+  ///   }
+  /// }
+  ///
+  /// class MyStateMachine extends StateMachine<Event, State> {
+  /// MyStateMachine() : super(InitialState()) {
+  ///    defineHandler<InitialState>(InitialStateHandler())
+  ///    define<OtherState>();
+  ///   }
+  /// }
+  /// ```
   void defineHandler<DefinedState extends State>(
       StateHandler<Event, State, DefinedState> handler) {
     final builder = handler._builder;

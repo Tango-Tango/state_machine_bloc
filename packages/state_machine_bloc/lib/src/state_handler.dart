@@ -5,7 +5,17 @@ abstract class StateHandler<Event, State, DefinedState extends State> {
       StateDefinitionBuilder<Event, State, DefinedState>();
   void Function(Event event)? _addFn;
 
-  set add(Function(Event event) fn) => _addFn = fn;
+  set add(Function(Event event) fn) {
+    assert(() {
+      if (_addFn != null) {
+        throw 'Tried to add an `add` handler twice. This setter should only be '
+            'called once.';
+      }
+      return true;
+    }());
+    _addFn = fn;
+  }
+
   void Function(Event event) get add {
     assert(() {
       if (_addFn == null) {
@@ -20,10 +30,9 @@ abstract class StateHandler<Event, State, DefinedState extends State> {
 
   void registerEventHandlers();
 
-  Future<void> onEnter(DefinedState state) async {}
-  Future<void> onExit(DefinedState state) async {}
-  Future<void> onChange(
-      DefinedState currentState, DefinedState nextState) async {}
+  FutureOr<void> onEnter(DefinedState state) {}
+  FutureOr<void> onExit(DefinedState state) {}
+  FutureOr<void> onChange(DefinedState currentState, DefinedState nextState) {}
 
   void on<DefinedEvent extends Event>(
     EventTransition<DefinedEvent, State, DefinedState> transition,

@@ -68,18 +68,8 @@ class StateBHandler extends StateHandler<Event, State, StateB> {
   }
 
   @override
-  Future<void> onEnter(state) async {
-    print('in onEnter');
-  }
-
-  @override
   Future<void> onExit(state) async {
     print('in onExit');
-  }
-
-  @override
-  Future<void> onChange(previous, next) async {
-    print('in onChange: $previous $next');
   }
 }
 
@@ -98,21 +88,6 @@ class StateCHandler extends StateHandler<Event, State, StateC> {
   StateA _onC(EventC event, StateC state) {
     _onEvent(event);
     return StateA();
-  }
-
-  @override
-  Future<void> onEnter(state) async {
-    print('in onEnter');
-  }
-
-  @override
-  Future<void> onExit(state) async {
-    print('in onExit');
-  }
-
-  @override
-  Future<void> onChange(previous, next) async {
-    print('in onChange: $previous $next');
   }
 }
 

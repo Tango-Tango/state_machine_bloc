@@ -37,53 +37,41 @@ part of 'state_machine.dart';
 abstract class StateHandler<Event, State, DefinedState extends State> {
   final StateDefinitionBuilder<Event, State, DefinedState> _builder =
       StateDefinitionBuilder<Event, State, DefinedState>();
-  void Function(Event event)? _addFn;
-
-  set add(Function(Event event) fn) {
-    assert(() {
-      if (_addFn != null) {
-        throw 'Tried to add an `add` handler twice. This setter should only be '
-            'called once.';
-      }
-      return true;
-    }());
-    _addFn = fn;
-  }
-
-  /// Add an event to the enclosing [StateMachine] where this [StateHandler]
-  /// is registered.
-  void Function(Event event) get add {
-    assert(() {
-      if (_addFn == null) {
-        throw 'Add function has not be applied to the handler. '
-            'Please use `add` setter to apply it.';
-      }
-      return true;
-    }());
-
-    return _addFn!;
-  }
 
   /// Register event handlers for the [DefinedState].
   void registerEventHandlers();
 
   /// Register [onEnterCallback] function as onExit side effect for [DefinedState]
+  ///
+  /// Returns a [FutureOr<Event?>], and any event returned will be added to
+  /// the [StateMachine] where this [StateHandler] is registered.
+  ///
   /// See also:
   ///
   /// * [StateDefinitionBuilder.onExit] for more information
-  FutureOr<void> onEnter(DefinedState state) {}
+  FutureOr<Event?> onEnter(DefinedState state) => null;
 
   /// Register [onExitCallback] function as onExit side effect for [DefinedState]
+  ///
+  /// Returns a [FutureOr<Event?>], and any event returned will be added to
+  /// the [StateMachine] where this [StateHandler] is registered.
+  ///
   /// See also:
   ///
   /// * [StateDefinitionBuilder.onExit] for more information
-  FutureOr<void> onExit(DefinedState state) {}
+  FutureOr<Event?> onExit(DefinedState state) => null;
 
   /// Register [onChangeCallback] function as onExit side effect for [DefinedState]
+  ///
+  /// Returns a [FutureOr<Event?>], and any event returned will be added to
+  /// the [StateMachine] where this [StateHandler] is registered.
+  ///
   /// See also:
   ///
   /// * [StateDefinitionBuilder.onExit] for more information
-  FutureOr<void> onChange(DefinedState currentState, DefinedState nextState) {}
+  FutureOr<Event?> onChange(
+          DefinedState currentState, DefinedState nextState) =>
+      null;
 
   /// Register [transition] function as one of [DefinedState]'s event handler
   /// for [DefinedEvent]

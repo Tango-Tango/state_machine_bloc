@@ -179,11 +179,10 @@ abstract class StateMachine<Event, State> extends Bloc<Event, State> {
       StateHandler<Event, State, DefinedState> handler) {
     final builder = handler._builder;
 
-    handler.add = _wrappedAddFn;
     handler.registerEventHandlers();
-    builder.onEnter(handler.onEnter);
-    builder.onExit(handler.onExit);
-    builder.onChange(handler.onChange);
+    builder.onEnter(_sideEffectWrapper(handler.onEnter));
+    builder.onExit(_sideEffectWrapper(handler.onExit));
+    builder.onChange(_onChangeWrapper(handler.onChange));
 
     final definition = handler._build();
 
@@ -260,18 +259,29 @@ abstract class StateMachine<Event, State> extends Bloc<Event, State> {
   _StateDefinition _definition(State state) =>
       _stateDefinitions.firstWhere((def) => def.isType(state));
 
-  /// This allows all [add] calls to check if the bloc is closed, asserting if
-  /// it is during development. Should help catch lifecycle issues during dev.
-  ///
-  /// allows state handlers to ignore checking [isClosed]
-  void _wrappedAddFn(Event event) {
-    assert(() {
-      if (isClosed) {
-        throw "Tried to add $event but $this is disposed.";
-      }
-      return true;
-    }());
+  FutureOr<void> Function(DefinedState)
+      _sideEffectWrapper<DefinedState extends State>(
+    FutureOr<Event?> Function(DefinedState) fn,
+  ) {
+    return (DefinedState state) async {
+      final result = await fn(state);
 
-    add(event);
+      if (result != null) {
+        add(result);
+      }
+    };
+  }
+
+  FutureOr<void> Function(DefinedState, DefinedState)
+      _onChangeWrapper<DefinedState extends State>(
+    FutureOr<Event?> Function(DefinedState, DefinedState) fn,
+  ) {
+    return (DefinedState prev, DefinedState next) async {
+      final result = await fn(prev, next);
+
+      if (result != null) {
+        add(result);
+      }
+    };
   }
 }

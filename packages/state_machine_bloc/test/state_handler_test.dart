@@ -1,7 +1,15 @@
+import 'dart:async';
+
 import 'package:state_machine_bloc/src/state_machine.dart';
 import 'package:test/test.dart';
 
 import 'utils.dart';
+
+List<String> eventsReceived = [];
+List<String> lifecycleEventsReceived = [];
+
+void _onEvent(dynamic e) => eventsReceived.add(e.runtimeType.toString());
+void _onLifecycleEvent(String e) => lifecycleEventsReceived.add(e);
 
 sealed class Event {}
 
@@ -10,6 +18,8 @@ class EventA extends Event {}
 class EventB extends Event {}
 
 class EventC extends Event {}
+
+class EventLifecycle extends Event {}
 
 sealed class State {
   @override
@@ -25,11 +35,14 @@ class StateB extends State {}
 
 class StateC extends State {}
 
+class StateLifecycle extends State {}
+
 class StateAHandler extends StateHandler<Event, State, StateA> {
   @override
   registerEventHandlers() {
     on<EventA>(_onA);
     on<EventA>(_onA);
+    on<EventLifecycle>(_onLifecycle);
   }
 
   StateB _onA(EventA event, StateA state) {
@@ -37,24 +50,29 @@ class StateAHandler extends StateHandler<Event, State, StateA> {
     return StateB();
   }
 
-  @override
-  Future<void> onEnter(state) async {
-    print('in onEnter');
+  StateLifecycle _onLifecycle(EventLifecycle event, StateA state) {
+    _onEvent(event);
+    return StateLifecycle();
   }
 
   @override
-  Future<void> onExit(state) async {
-    print('in onExit');
+  FutureOr<Event?> onEnter(state) {
+    _onLifecycleEvent('onEnterA');
+    return null;
   }
 
   @override
-  Future<void> onChange(previous, next) async {
-    print('in onChange: $previous $next');
+  FutureOr<Event?> onExit(state) async {
+    _onLifecycleEvent('onExitA');
+    return null;
+  }
+
+  @override
+  FutureOr<Event?> onChange(previous, next) async {
+    _onLifecycleEvent('onChangeA');
+    return null;
   }
 }
-
-void _onEvent(dynamic e) => eventsReceived.add(e.runtimeType.toString());
-List<String> eventsReceived = [];
 
 class StateBHandler extends StateHandler<Event, State, StateB> {
   @override
@@ -68,8 +86,9 @@ class StateBHandler extends StateHandler<Event, State, StateB> {
   }
 
   @override
-  Future<void> onExit(state) async {
-    print('in onExit');
+  FutureOr<Event?> onExit(state) async {
+    _onLifecycleEvent('onExitB');
+    return null;
   }
 }
 
@@ -89,6 +108,38 @@ class StateCHandler extends StateHandler<Event, State, StateC> {
     _onEvent(event);
     return StateA();
   }
+
+  @override
+  FutureOr<Event?> onEnter(state) async {
+    _onLifecycleEvent('onEnterC');
+    return null;
+  }
+}
+
+class LifecycleHandler extends StateHandler<Event, State, StateLifecycle> {
+  @override
+  registerEventHandlers() {
+    on<EventA>((event, state) => StateLifecycle());
+    on<EventB>((event, state) => StateA());
+  }
+
+  @override
+  FutureOr<Event?> onEnter(state) async {
+    _onLifecycleEvent('onEnterLifecycle');
+    return EventA();
+  }
+
+  @override
+  FutureOr<Event?> onExit(state) async {
+    _onLifecycleEvent('onExitLifecycle');
+    return EventC();
+  }
+
+  @override
+  FutureOr<Event?> onChange(previous, next) async {
+    _onLifecycleEvent('onChangeLifecycle');
+    return EventB();
+  }
 }
 
 class DummyStateMachine extends StateMachine<Event, State> {
@@ -96,12 +147,17 @@ class DummyStateMachine extends StateMachine<Event, State> {
     defineHandler<StateA>(StateAHandler());
     defineHandler<StateB>(StateBHandler());
     defineHandler<StateC>(StateCHandler());
+    defineHandler<StateLifecycle>(LifecycleHandler());
   }
 }
 
 void main() {
   group("StateHandler", () {
-    tearDown(() => eventsReceived.clear());
+    tearDown(() {
+      eventsReceived.clear();
+      lifecycleEventsReceived.clear();
+    });
+
     test("event handler that return null does not trigger a transition",
         () async {
       final sm = DummyStateMachine(StateC());
@@ -110,6 +166,7 @@ void main() {
       await wait();
 
       expect(eventsReceived, ["EventC", "EventC"]);
+      expect(lifecycleEventsReceived, ["onEnterC", "onEnterA"]);
     });
 
     test("events are received and evaluated sequentially", () async {
@@ -124,6 +181,8 @@ void main() {
       await wait();
 
       expect(eventsReceived, ["EventA", "EventB"]);
+      expect(lifecycleEventsReceived,
+          ['onEnterA', 'onExitA', 'onExitB', 'onEnterA']);
     });
 
     test("events are evaluated sequentially until a transition happen",
@@ -135,6 +194,7 @@ void main() {
       await wait();
 
       expect(eventsReceived, ["EventA"]);
+      expect(lifecycleEventsReceived, ['onEnterA', 'onExitA']);
     });
     test(
         "if no event handler corresponding to the received event is registered for the current state, event is ignored",
@@ -145,6 +205,25 @@ void main() {
       await wait();
 
       expect(eventsReceived, []);
+      expect(lifecycleEventsReceived, ['onEnterA']);
+    });
+
+    test("handles returning events from async and non-async lifecycle handlers",
+        () async {
+      final sm = DummyStateMachine();
+      sm.add(EventLifecycle());
+
+      await wait();
+
+      expect(eventsReceived, ['EventLifecycle']);
+      expect(lifecycleEventsReceived, [
+        'onEnterA',
+        'onExitA',
+        'onEnterLifecycle',
+        'onChangeLifecycle',
+        'onExitLifecycle',
+        'onEnterA'
+      ]);
     });
   });
 }

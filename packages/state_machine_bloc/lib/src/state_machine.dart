@@ -272,8 +272,6 @@ abstract class StateMachine<Event, State> extends Bloc<Event, State> {
       return true;
     }());
 
-    if (!isClosed) {
-      add(event);
-    }
+    add(event);
   }
 }

@@ -12,6 +12,6 @@ dev_dependencies:
   test: ^1.20.2
 
 dependencies: 
-  bloc: ^8.0.2
-  bloc_concurrency: ^0.2.0
+  bloc: ^9.0.0
+  bloc_concurrency: ^0.3.0
   meta: ^1.7.0
